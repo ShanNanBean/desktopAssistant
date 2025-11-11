@@ -68,12 +68,6 @@
                            Command="{Binding OpenSettingsCommand}"
                            Style="{StaticResource {x:Static ToolBar.ButtonStyleKey}}"
                            Foreground="White"
-                           Margin="5,0"
-                           Padding="10,5"/>
-                    <Button Content="📋 历史" 
-                           Command="{Binding OpenHistoryCommand}"
-                           Style="{StaticResource {x:Static ToolBar.ButtonStyleKey}}"
-                           Foreground="White"
                            Padding="10,5"/>
                 </StackPanel>
             </Grid>
@@ -83,87 +77,106 @@
         <ScrollViewer Grid.Row="1" 
                      VerticalScrollBarVisibility="Auto"
                      Padding="10"
-                     Background="White">
-            <ItemsControl ItemsSource="{Binding Messages}">
-                <ItemsControl.ItemTemplate>
-                    <DataTemplate>
-                        <Border>
-                            <Border.Style>
-                                <Style TargetType="Border" BasedOn="{StaticResource AIMessageStyle}">
+                     Background="White"
+                     x:Name="MessageScrollViewer">
+            <StackPanel>
+                <ItemsControl ItemsSource="{Binding Messages}">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <Border>
+                                <Border.Style>
+                                    <Style TargetType="Border" BasedOn="{StaticResource AIMessageStyle}">
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding IsUser}" Value="True">
+                                                <Setter Property="Background" Value="#E3F2FD"/>
+                                                <Setter Property="HorizontalAlignment" Value="Right"/>
+                                                <Setter Property="Margin" Value="50,5,10,5"/>
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </Border.Style>
+
+                                <StackPanel>
+                                    <!-- 消息内容 -->
+                                    <TextBlock Text="{Binding Content}" 
+                                              TextWrapping="Wrap"
+                                              FontSize="14"/>
+
+                                    <!-- 命令块 -->
+                                    <Border Style="{StaticResource CommandBlockStyle}"
+                                           Visibility="{Binding Command, Converter={StaticResource NullToVisibilityConverter}}">
+                                        <Grid>
+                                            <Grid.RowDefinitions>
+                                                <RowDefinition Height="Auto"/>
+                                                <RowDefinition Height="Auto"/>
+                                            </Grid.RowDefinitions>
+
+                                            <TextBlock Grid.Row="0"
+                                                      Text="{Binding Command.CommandText}" 
+                                                      Foreground="#A5D6A7"
+                                                      FontFamily="Consolas"
+                                                      FontSize="13"
+                                                      TextWrapping="Wrap"/>
+
+                                            <StackPanel Grid.Row="1" 
+                                                       Orientation="Horizontal" 
+                                                       Margin="0,8,0,0">
+                                                <Button Content="📋 复制" 
+                                                       Command="{Binding DataContext.CopyCommandCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                       CommandParameter="{Binding Command.CommandText}"
+                                                       Padding="8,4"
+                                                       Margin="0,0,5,0"
+                                                       FontSize="12"/>
+                                                <Button Content="▶ 执行" 
+                                                       Command="{Binding DataContext.ExecuteCommandCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                       CommandParameter="{Binding Command}"
+                                                       Padding="8,4"
+                                                       FontSize="12"/>
+                                            </StackPanel>
+                                        </Grid>
+                                    </Border>
+
+                                    <!-- 时间戳 -->
+                                    <TextBlock Text="{Binding Timestamp, StringFormat='{}{0:HH:mm:ss}'}" 
+                                              FontSize="10"
+                                              Foreground="#999"
+                                              Margin="0,4,0,0"
+                                              HorizontalAlignment="{Binding IsUser, Converter={StaticResource BoolToAlignmentConverter}}"/>
+                                </StackPanel>
+                            </Border>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+                
+                <!-- 正在思考的动态提示 -->
+                <Border Style="{StaticResource AIMessageStyle}"
+                       Visibility="{Binding IsBusy, Converter={StaticResource BoolToVisibilityConverter}}">
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock FontSize="14"
+                                  Foreground="#1976D2"
+                                  FontWeight="SemiBold">
+                            <TextBlock.Style>
+                                <Style TargetType="TextBlock">
+                                    <Setter Property="Text" Value="正在思考"/>
                                     <Style.Triggers>
-                                        <DataTrigger Binding="{Binding IsUser}" Value="True">
-                                            <Setter Property="Background" Value="#E3F2FD"/>
-                                            <Setter Property="HorizontalAlignment" Value="Right"/>
-                                            <Setter Property="Margin" Value="50,5,10,5"/>
-                                        </DataTrigger>
+                                        <EventTrigger RoutedEvent="Loaded">
+                                            <BeginStoryboard>
+                                                <Storyboard RepeatBehavior="Forever">
+                                                    <StringAnimationUsingKeyFrames Storyboard.TargetProperty="Text" Duration="0:0:1.2">
+                                                        <DiscreteStringKeyFrame Value="正在思考." KeyTime="0:0:0"/>
+                                                        <DiscreteStringKeyFrame Value="正在思考.." KeyTime="0:0:0.4"/>
+                                                        <DiscreteStringKeyFrame Value="正在思考..." KeyTime="0:0:0.8"/>
+                                                    </StringAnimationUsingKeyFrames>
+                                                </Storyboard>
+                                            </BeginStoryboard>
+                                        </EventTrigger>
                                     </Style.Triggers>
                                 </Style>
-                            </Border.Style>
-
-                            <StackPanel>
-                                <!-- 消息内容 -->
-                                <TextBlock Text="{Binding Content}" 
-                                          TextWrapping="Wrap"
-                                          FontSize="14"/>
-
-                                <!-- 命令块 -->
-                                <Border Style="{StaticResource CommandBlockStyle}"
-                                       Visibility="{Binding Command, Converter={StaticResource NullToVisibilityConverter}}">
-                                    <Grid>
-                                        <Grid.RowDefinitions>
-                                            <RowDefinition Height="Auto"/>
-                                            <RowDefinition Height="Auto"/>
-                                        </Grid.RowDefinitions>
-
-                                        <TextBlock Grid.Row="0"
-                                                  Text="{Binding Command.CommandText}" 
-                                                  Foreground="#A5D6A7"
-                                                  FontFamily="Consolas"
-                                                  FontSize="13"
-                                                  TextWrapping="Wrap"/>
-
-                                        <StackPanel Grid.Row="1" 
-                                                   Orientation="Horizontal" 
-                                                   Margin="0,8,0,0">
-                                            <Button Content="📋 复制" 
-                                                   Command="{Binding DataContext.CopyCommandCommand, RelativeSource={RelativeSource AncestorType=Window}}"
-                                                   CommandParameter="{Binding Command.CommandText}"
-                                                   Padding="8,4"
-                                                   Margin="0,0,5,0"
-                                                   FontSize="12"/>
-                                            <Button Content="▶ 执行" 
-                                                   Command="{Binding DataContext.ExecuteCommandCommand, RelativeSource={RelativeSource AncestorType=Window}}"
-                                                   CommandParameter="{Binding Command}"
-                                                   Padding="8,4"
-                                                   FontSize="12"/>
-                                        </StackPanel>
-                                    </Grid>
-                                </Border>
-
-                                <!-- 执行结果 -->
-                                <Border Background="#FFFDE7" 
-                                       CornerRadius="4" 
-                                       Padding="10" 
-                                       Margin="0,8,0,0"
-                                       Visibility="{Binding ExecutionResult, Converter={StaticResource NullToVisibilityConverter}}">
-                                    <TextBlock Text="{Binding ExecutionResult}" 
-                                              FontFamily="Consolas"
-                                              FontSize="12"
-                                              TextWrapping="Wrap"
-                                              Foreground="#555"/>
-                                </Border>
-
-                                <!-- 时间戳 -->
-                                <TextBlock Text="{Binding Timestamp, StringFormat='{}{0:HH:mm:ss}'}" 
-                                          FontSize="10"
-                                          Foreground="#999"
-                                          Margin="0,4,0,0"
-                                          HorizontalAlignment="{Binding IsUser, Converter={StaticResource BoolToAlignmentConverter}}"/>
-                            </StackPanel>
-                        </Border>
-                    </DataTemplate>
-                </ItemsControl.ItemTemplate>
-            </ItemsControl>
+                            </TextBlock.Style>
+                        </TextBlock>
+                    </StackPanel>
+                </Border>
+            </StackPanel>
         </ScrollViewer>
 
         <!-- 输入区域 -->
@@ -210,22 +223,10 @@
                Padding="15,8"
                BorderBrush="#E0E0E0"
                BorderThickness="0,1,0,0">
-            <Grid>
-                <TextBlock Text="{Binding StatusMessage}" 
-                          FontSize="12"
-                          Foreground="#666"
-                          VerticalAlignment="Center"/>
-
-                <StackPanel Orientation="Horizontal" 
-                           HorizontalAlignment="Right"
-                           Visibility="{Binding IsBusy, Converter={StaticResource BoolToVisibilityConverter}}">
-                    <TextBlock Text="处理中..." 
-                              FontSize="12"
-                              Foreground="#666"
-                              VerticalAlignment="Center"
-                              Margin="0,0,10,0"/>
-                </StackPanel>
-            </Grid>
+            <TextBlock Text="{Binding StatusMessage}" 
+                      FontSize="12"
+                      Foreground="#666"
+                      VerticalAlignment="Center"/>
         </Border>
     </Grid>
 </Window>

@@ -1,8 +1,21 @@
+using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Text;
 using Microsoft.Win32;
 
 namespace PowerShellHelper.Services;
+
+/// <summary>
+/// 编辑器信息
+/// </summary>
+public class EditorInfo
+{
+    public string Name { get; set; } = string.Empty;
+    public string Path { get; set; } = string.Empty;
+    public bool IsAvailable { get; set; }
+}
 
 /// <summary>
 /// 文件操作辅助服务
@@ -61,6 +74,7 @@ public class FileHelperService
 
     /// <summary>
     /// 在编辑器中打开文件
+    /// 采用异步后台启动方式，避免与PowerShell执行的资源竞争
     /// </summary>
     public bool OpenInEditor(string filePath)
     {
@@ -83,10 +97,26 @@ public class FileHelperService
             {
                 FileName = editorPath,
                 Arguments = $"\"{filePath}\"",
-                UseShellExecute = true
+                UseShellExecute = true,
+                CreateNoWindow = editorPath.EndsWith("Code.exe", StringComparison.OrdinalIgnoreCase) // VS Code 可隐藏控制台
             };
 
-            Process.Start(startInfo);
+            // 关键：在后台线程中启动编辑器，避免占用UI线程和与PowerShell的资源竞争
+            // 如果文件是临时脚本文件，编辑器会保持文件锁，直到进程关闭
+            // 通过后台启动，确保PowerShell执行时编辑器已完全初始化
+            _ = System.Threading.Tasks.Task.Run(() =>
+            {
+                try
+                {
+                    using var process = Process.Start(startInfo);
+                    // 不等待进程完成，让编辑器在后台运行
+                }
+                catch
+                {
+                    // 忽略后台启动失败
+                }
+            });
+
             return true;
         }
         catch
@@ -97,6 +127,7 @@ public class FileHelperService
 
     /// <summary>
     /// 在文件资源管理器中打开文件所在目录
+    /// 采用异步后台启动方式，避免资源竞争
     /// </summary>
     public bool OpenInExplorer(string path)
     {
@@ -104,12 +135,27 @@ public class FileHelperService
         {
             if (File.Exists(path))
             {
-                Process.Start("explorer.exe", $"/select,\"{path}\"");
+                // 在后台线程启动explorer，避免阻塞主线程和与PowerShell竞争
+                _ = System.Threading.Tasks.Task.Run(() =>
+                {
+                    try
+                    {
+                        using var process = Process.Start("explorer.exe", $"/select,\"{path}\"");
+                    }
+                    catch { }
+                });
                 return true;
             }
             else if (Directory.Exists(path))
             {
-                Process.Start("explorer.exe", $"\"{path}\"");
+                _ = System.Threading.Tasks.Task.Run(() =>
+                {
+                    try
+                    {
+                        using var process = Process.Start("explorer.exe", $"\"{path}\"");
+                    }
+                    catch { }
+                });
                 return true;
             }
 
@@ -189,34 +235,8 @@ public class FileHelperService
         }
         catch { }
 
-        // 尝试使用 where 命令查找
-        try
-        {
-            var startInfo = new ProcessStartInfo
-            {
-                FileName = "where",
-                Arguments = "code",
-                RedirectStandardOutput = true,
-                UseShellExecute = false,
-                CreateNoWindow = true
-            };
-
-            using var process = Process.Start(startInfo);
-            if (process != null)
-            {
-                var output = process.StandardOutput.ReadToEnd();
-                process.WaitForExit();
-                
-                if (!string.IsNullOrWhiteSpace(output))
-                {
-                    var firstLine = output.Split('\n')[0].Trim();
-                    if (File.Exists(firstLine))
-                        return firstLine;
-                }
-            }
-        }
-        catch { }
-
+        // 不再尝试使用 cmd /c where，直接返回 null
+        // 这避免了任何外部进程执行导致的状态污染
         return null;
     }
 
@@ -240,12 +260,3 @@ public class FileHelperService
     }
 }
 
-/// <summary>
-/// 编辑器信息
-/// </summary>
-public class EditorInfo
-{
-    public string Name { get; set; } = string.Empty;
-    public string Path { get; set; } = string.Empty;
-    public bool IsAvailable { get; set; }
-}

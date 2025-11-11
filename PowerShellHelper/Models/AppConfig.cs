@@ -1,3 +1,5 @@
+using System.Collections.Generic;
+
 namespace PowerShellHelper.Models;
 
 /// <summary>
@@ -29,11 +31,6 @@ public class AppConfig
     public int FontSize { get; set; } = 14;
     public string DefaultEditor { get; set; } = "notepad.exe";
     public string GlobalHotkey { get; set; } = "Ctrl+Shift+P";
-    
-    // 历史记录配置
-    public int HistoryRetentionDays { get; set; } = 30;
-    public bool RecordSensitiveCommands { get; set; } = false;
-    public bool AutoCleanup { get; set; } = true;
     
     // 窗口配置
     public double WindowLeft { get; set; } = 100;

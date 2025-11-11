@@ -115,16 +115,6 @@
                                  DisplayMemberPath="Name"
                                  Margin="0,0,0,15"
                                  Padding="8"/>
-
-                        <TextBlock Text="历史记录" FontWeight="Bold" Margin="0,15,0,5"/>
-                        <StackPanel Orientation="Horizontal" Margin="0,0,0,5">
-                            <TextBlock Text="保留天数:" VerticalAlignment="Center" Margin="0,0,10,0"/>
-                            <TextBox Text="{Binding HistoryRetentionDays}" Width="80" Padding="8"/>
-                            <TextBlock Text="天" VerticalAlignment="Center" Margin="10,0,0,0"/>
-                        </StackPanel>
-                        <TextBlock Text="超过指定天数的历史记录将被自动清理" 
-                                  FontSize="11" 
-                                  Foreground="#666"/>
                     </StackPanel>
                 </ScrollViewer>
             </TabItem>

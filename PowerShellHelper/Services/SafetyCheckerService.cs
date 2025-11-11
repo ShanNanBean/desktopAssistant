@@ -1,3 +1,6 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Text.RegularExpressions;
 using PowerShellHelper.Models;
 
@@ -25,29 +28,28 @@ public class SafetyCheckerService
         "Remove", "Delete", "Clear", "Format", "Stop", "Disable", "Uninstall"
     };
 
-    // 中风险动词
+    // 中等风险动词
     private static readonly HashSet<string> MediumRiskVerbs = new(StringComparer.OrdinalIgnoreCase)
     {
-        "Set", "New", "Move", "Rename", "Copy", "Start", "Enable", "Install"
+        "Set", "Update", "Enable", "Restart", "New"
     };
 
-    // 低风险动词(只读操作)
+    // 安全动词
     private static readonly HashSet<string> SafeVerbs = new(StringComparer.OrdinalIgnoreCase)
     {
-        "Get", "Show", "Test", "Measure", "Find", "Search", "Read", "Select"
+        "Get", "Test", "Select", "Measure", "Show", "Write"
     };
 
-    // 系统关键目录
+    // 系统关键路径
     private static readonly HashSet<string> SystemPaths = new(StringComparer.OrdinalIgnoreCase)
     {
-        "C:\\Windows", "C:\\Program Files", "C:\\Program Files (x86)",
-        "$env:SystemRoot", "$env:ProgramFiles", "HKLM:", "HKCU:\\Software\\Microsoft\\Windows"
+        @"C:\Windows", @"C:\Program Files", @"C:\Program Files (x86)"
     };
 
     // 危险参数
     private static readonly HashSet<string> DangerousParameters = new(StringComparer.OrdinalIgnoreCase)
     {
-        "-Force", "-Recurse", "-Confirm:$false", "-WhatIf:$false"
+        "-Force", "-Confirm:$false", "-WhatIf"
     };
 
     public SafetyCheckerService()
@@ -330,3 +332,4 @@ public class SafetyCheckerService
         return match.Success ? match.Groups[1].Value : string.Empty;
     }
 }
+

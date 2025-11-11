@@ -1,7 +1,8 @@
+using System;
+using System.Collections.Generic;
 using System.Diagnostics;
-using System.Management.Automation;
-using System.Management.Automation.Runspaces;
 using System.Text;
+using System.Threading.Tasks;
 using PowerShellHelper.Models;
 
 namespace PowerShellHelper.Services;
@@ -25,82 +26,102 @@ public class PowerShellExecutor
     {
         var result = new CommandExecutionResult();
         var stopwatch = Stopwatch.StartNew();
+        var tempScriptFile = string.Empty;
 
         try
         {
-            // 创建独立的PowerShell运行空间
-            using var runspace = RunspaceFactory.CreateRunspace();
-            runspace.Open();
-
-            using var powershell = PowerShell.Create();
-            powershell.Runspace = runspace;
-
-            // 添加命令
-            powershell.AddScript(command);
-
-            var outputBuilder = new StringBuilder();
-            var errorBuilder = new StringBuilder();
-
-            // 设置输出处理
-            powershell.Streams.Information.DataAdded += (sender, e) =>
-            {
-                var info = powershell.Streams.Information[e.Index];
-                outputBuilder.AppendLine(info.ToString());
-            };
-
-            powershell.Streams.Warning.DataAdded += (sender, e) =>
-            {
-                var warning = powershell.Streams.Warning[e.Index];
-                outputBuilder.AppendLine($"WARNING: {warning}");
-            };
-
-            powershell.Streams.Error.DataAdded += (sender, e) =>
-            {
-                var error = powershell.Streams.Error[e.Index];
-                errorBuilder.AppendLine(error.ToString());
-            };
-
-            // 执行命令(带超时)
-            var asyncResult = powershell.BeginInvoke();
-            var timeout = TimeSpan.FromSeconds(timeoutSeconds);
+            // 直接调用系统 PowerShell 5.1 可执行文件
+            var powershellPath = @"C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe";
             
-            if (!asyncResult.AsyncWaitHandle.WaitOne(timeout))
+            if (!System.IO.File.Exists(powershellPath))
             {
-                powershell.Stop();
+                result.Success = false;
+                result.ErrorOutput = $"PowerShell 可执行文件未找到: {powershellPath}";
+                return result;
+            }
+
+            // 创建临时脚本文件
+            tempScriptFile = System.IO.Path.Combine(
+                System.IO.Path.GetTempPath(), 
+                $"psh_{Guid.NewGuid()}.ps1"
+            );
+
+            // 将命令写入临时脚本文件
+            // 这是最可靠的方法，完全避免了参数转义问题
+            var scriptLines = new[]
+            {
+                "$ErrorActionPreference = 'Continue'",
+                "try {",
+                $"  {command}",
+                "} catch {",
+                "  $_.Exception.Message",
+                "}"
+            };
+            
+            System.IO.File.WriteAllLines(tempScriptFile, scriptLines, Encoding.UTF8);
+
+            // 执行PowerShell脚本
+            var processInfo = new ProcessStartInfo
+            {
+                FileName = powershellPath,
+                Arguments = $"-NoProfile -ExecutionPolicy Bypass -File \"{tempScriptFile}\"",
+                UseShellExecute = false,
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+                CreateNoWindow = true,
+                StandardOutputEncoding = Encoding.UTF8,
+                StandardErrorEncoding = Encoding.UTF8
+            };
+
+            using var process = Process.Start(processInfo);
+            
+            if (process == null)
+            {
+                result.Success = false;
+                result.ErrorOutput = "无法启动 PowerShell 进程";
+                return result;
+            }
+
+            // 关键修复：使用异步读取避免死锁
+            // 当 RedirectStandardOutput 和 RedirectStandardError 同时为 true 时，
+            // 必须异步读取，否则缓冲区满了会导致进程挂起
+            var outputTask = process.StandardOutput.ReadToEndAsync();
+            var errorTask = process.StandardError.ReadToEndAsync();
+
+            // 等待进程完成（带超时）
+            bool exited = process.WaitForExit(timeoutSeconds * 1000);
+            
+            // 等待读取任务完成（避免丢失数据）
+            var stdOutput = outputTask.Result;
+            var stdError = errorTask.Result;
+            
+            if (!exited)
+            {
+                try
+                {
+                    process.Kill();
+                    process.WaitForExit(5000);
+                }
+                catch { }
+                
                 result.Success = false;
                 result.ErrorOutput = $"命令执行超时({timeoutSeconds}秒)";
                 return result;
             }
 
-            var output = powershell.EndInvoke(asyncResult);
-
-            // 收集标准输出
-            if (output != null)
-            {
-                foreach (var item in output)
-                {
-                    if (item != null)
-                    {
-                        outputBuilder.AppendLine(item.ToString());
-                    }
-                }
-            }
-
             stopwatch.Stop();
             result.ExecutionTime = stopwatch.Elapsed;
+            result.ExitCode = process.ExitCode;
 
-            // 设置输出和错误
-            result.Output = outputBuilder.ToString();
-            result.ErrorOutput = errorBuilder.ToString();
+            // 设置输出和错误（数据已在上面异步读取完成）
+            result.Output = stdOutput?.TrimEnd() ?? string.Empty;
+            result.ErrorOutput = stdError?.TrimEnd() ?? string.Empty;
+            result.Success = process.ExitCode == 0 && string.IsNullOrEmpty(result.ErrorOutput);
 
-            // 判断执行是否成功
-            result.Success = !powershell.HadErrors && string.IsNullOrEmpty(errorBuilder.ToString());
-            result.ExitCode = result.Success ? 0 : 1;
-
-            // 如果有错误但输出为空,设置错误信息
-            if (!result.Success && string.IsNullOrEmpty(result.ErrorOutput))
+            // 如果执行失败但没有错误信息，设置默认错误信息
+            if (!result.Success && string.IsNullOrEmpty(result.ErrorOutput) && process.ExitCode != 0)
             {
-                result.ErrorOutput = "命令执行失败,但未返回错误信息";
+                result.ErrorOutput = $"命令执行失败，退出码: {process.ExitCode}";
             }
         }
         catch (Exception ex)
@@ -111,61 +132,19 @@ public class PowerShellExecutor
             result.ExecutionTime = stopwatch.Elapsed;
             result.ExitCode = -1;
         }
-
-        return result;
-    }
-
-    /// <summary>
-    /// 测试命令语法是否正确
-    /// </summary>
-    public bool ValidateCommandSyntax(string command)
-    {
-        try
+        finally
         {
-            using var runspace = RunspaceFactory.CreateRunspace();
-            runspace.Open();
-            using var powershell = PowerShell.Create();
-            powershell.Runspace = runspace;
-
-            // 使用Get-Command尝试解析命令
-            powershell.AddScript($"$null = {{ {command} }}");
-            powershell.Invoke();
-
-            return !powershell.HadErrors;
-        }
-        catch
-        {
-            return false;
-        }
-    }
-
-    /// <summary>
-    /// 提取命令中涉及的文件路径
-    /// </summary>
-    public List<string> ExtractFilePaths(string command)
-    {
-        var paths = new List<string>();
-        
-        // 简单的路径提取(可以改进)
-        var pathPatterns = new[]
-        {
-            @"[A-Z]:\\(?:[^\\/:*?""<>|\r\n]+\\)*[^\\/:*?""<>|\r\n]*",  // 绝对路径
-            @"\.\\.+",  // 相对路径
-            @"~\\.+"    // 用户目录
-        };
-
-        foreach (var pattern in pathPatterns)
-        {
-            var matches = System.Text.RegularExpressions.Regex.Matches(command, pattern);
-            foreach (System.Text.RegularExpressions.Match match in matches)
+            // 清理临时脚本文件
+            try
             {
-                if (!string.IsNullOrWhiteSpace(match.Value))
+                if (!string.IsNullOrEmpty(tempScriptFile) && System.IO.File.Exists(tempScriptFile))
                 {
-                    paths.Add(match.Value);
+                    System.IO.File.Delete(tempScriptFile);
                 }
             }
+            catch { }
         }
 
-        return paths.Distinct().ToList();
+        return result;
     }
 }

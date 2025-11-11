@@ -1,3 +1,5 @@
+using System;
+
 namespace PowerShellHelper.Models;
 
 /// <summary>

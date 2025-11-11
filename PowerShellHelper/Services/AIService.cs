@@ -1,8 +1,12 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
 using System.Text.RegularExpressions;
+using System.Threading.Tasks;
 using PowerShellHelper.Models;
 
 namespace PowerShellHelper.Services;
@@ -48,6 +52,9 @@ public class AIService : IAIService
     {
         _httpClient = new HttpClient();
         _configManager = ConfigManager.Instance;
+        
+        // 仅设置通用配置，不再修改 DefaultRequestHeaders
+        _httpClient.Timeout = TimeSpan.FromSeconds(120); // 默认超时
     }
 
     public async Task<AIResponse> GenerateCommandAsync(string userInput, List<ChatMessage> context)
@@ -68,18 +75,26 @@ public class AIService : IAIService
             string endpoint = GetEndpoint(config);
             var requestBody = BuildRequestBody(config, userInput, context);
             
-            _httpClient.DefaultRequestHeaders.Clear();
-            _httpClient.DefaultRequestHeaders.Authorization = 
-                new AuthenticationHeaderValue("Bearer", config.ApiKey);
-            _httpClient.Timeout = TimeSpan.FromSeconds(config.TimeoutSeconds);
-
-            var content = new StringContent(
-                JsonSerializer.Serialize(requestBody),
-                Encoding.UTF8,
-                "application/json"
+            // 关键修复：使用 HttpRequestMessage 而不是直接修改 DefaultRequestHeaders
+            // 这样每个请求都是独立的，不会互相干扰
+            var request = new HttpRequestMessage(HttpMethod.Post, endpoint)
+            {
+                Content = new StringContent(
+                    JsonSerializer.Serialize(requestBody),
+                    Encoding.UTF8,
+                    "application/json"
+                )
+            };
+            
+            // 为此请求单独设置 Authorization header
+            request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", config.ApiKey);
+            
+            // 设置超时（使用 CancellationTokenSource）
+            using var cts = new System.Threading.CancellationTokenSource(
+                TimeSpan.FromSeconds(config.TimeoutSeconds)
             );
 
-            var response = await _httpClient.PostAsync(endpoint, content);
+            var response = await _httpClient.SendAsync(request, cts.Token);
             
             if (!response.IsSuccessStatusCode)
             {

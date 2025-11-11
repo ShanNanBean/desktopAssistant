@@ -1,4 +1,7 @@
+using System;
 using System.Collections.ObjectModel;
+using System.Linq;
+using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Input;
 using PowerShellHelper.Models;
@@ -14,7 +17,6 @@ public class MainWindowViewModel : ViewModelBase
     private readonly AIService _aiService;
     private readonly SafetyCheckerService _safetyChecker;
     private readonly PowerShellExecutor _executor;
-    private readonly HistoryService _historyService;
     private readonly FileHelperService _fileHelper;
 
     private string _userInput = string.Empty;
@@ -44,7 +46,6 @@ public class MainWindowViewModel : ViewModelBase
     public ICommand SendMessageCommand { get; }
     public ICommand ExecuteCommandCommand { get; }
     public ICommand OpenSettingsCommand { get; }
-    public ICommand OpenHistoryCommand { get; }
     public ICommand CopyCommandCommand { get; }
     public ICommand OpenFileCommand { get; }
 
@@ -53,7 +54,6 @@ public class MainWindowViewModel : ViewModelBase
         _aiService = new AIService();
         _safetyChecker = new SafetyCheckerService();
         _executor = new PowerShellExecutor();
-        _historyService = HistoryService.Instance;
         _fileHelper = new FileHelperService();
 
         SendMessageCommand = new RelayCommand(async () => await SendMessageAsync(), () => !IsBusy && !string.IsNullOrWhiteSpace(UserInput));
@@ -61,7 +61,6 @@ public class MainWindowViewModel : ViewModelBase
         CopyCommandCommand = new RelayCommand<string>(CopyCommand);
         OpenFileCommand = new RelayCommand<string>(OpenFile);
         OpenSettingsCommand = new RelayCommand(OpenSettings);
-        OpenHistoryCommand = new RelayCommand(OpenHistory);
 
         // 添加欢迎消息
         Messages.Add(new ChatMessage
@@ -145,16 +144,6 @@ public class MainWindowViewModel : ViewModelBase
                     Content = $"⚠️ 安全警告: {safetyResult.Reason}",
                     Timestamp = DateTime.Now
                 });
-                
-                // 记录到历史(未执行)
-                _historyService.AddRecord(new CommandHistoryRecord
-                {
-                    Timestamp = DateTime.Now,
-                    UserInput = userMessage,
-                    GeneratedCommand = response.Command.CommandText,
-                    Status = ExecutionStatus.NotExecuted,
-                    RiskLevel = safetyResult.RiskLevel
-                });
 
                 StatusMessage = "命令被拦截";
             }
@@ -180,15 +169,6 @@ public class MainWindowViewModel : ViewModelBase
                         IsUser = false,
                         Content = "已取消执行",
                         Timestamp = DateTime.Now
-                    });
-
-                    _historyService.AddRecord(new CommandHistoryRecord
-                    {
-                        Timestamp = DateTime.Now,
-                        UserInput = userMessage,
-                        GeneratedCommand = response.Command.CommandText,
-                        Status = ExecutionStatus.Cancelled,
-                        RiskLevel = safetyResult.RiskLevel
                     });
 
                     StatusMessage = "已取消";
@@ -226,6 +206,7 @@ public class MainWindowViewModel : ViewModelBase
 
         try
         {
+            // ... existing code ...
             var result = await _executor.ExecuteCommandAsync(command.CommandText);
 
             var resultMessage = new ChatMessage
@@ -239,28 +220,32 @@ public class MainWindowViewModel : ViewModelBase
 
             Messages.Add(resultMessage);
 
-            // 记录到历史
-            _historyService.AddRecord(new CommandHistoryRecord
-            {
-                Timestamp = DateTime.Now,
-                UserInput = Messages.LastOrDefault(m => m.IsUser)?.Content ?? string.Empty,
-                GeneratedCommand = command.CommandText,
-                Status = result.Success ? ExecutionStatus.Success : ExecutionStatus.Failed,
-                ExecutionResult = result.Success ? result.Output : result.ErrorOutput,
-                RiskLevel = command.RiskLevel
-            });
-
             StatusMessage = result.Success ? "执行成功" : "执行失败";
         }
         catch (Exception ex)
         {
-            Messages.Add(new ChatMessage
+            // 捕获任何包含"already started"的错误
+            var errorMsg = ex.Message ?? "";
+            if (errorMsg.Contains("already started") || errorMsg.Contains("已启动"))
             {
-                IsUser = false,
-                Content = $"执行异常: {ex.Message}",
-                Status = ExecutionStatus.Failed,
-                Timestamp = DateTime.Now
-            });
+                Messages.Add(new ChatMessage
+                {
+                    IsUser = false,
+                    Content = $"⚠️ 实例状态错误: {errorMsg}\n这通常表示PowerShell实例被不当复用。请重启应用。",
+                    Status = ExecutionStatus.Failed,
+                    Timestamp = DateTime.Now
+                });
+            }
+            else
+            {
+                Messages.Add(new ChatMessage
+                {
+                    IsUser = false,
+                    Content = $"执行异常: {ex.Message}",
+                    Status = ExecutionStatus.Failed,
+                    Timestamp = DateTime.Now
+                });
+            }
             StatusMessage = "执行异常";
         }
         finally
@@ -293,14 +278,5 @@ public class MainWindowViewModel : ViewModelBase
             Owner = System.Windows.Application.Current.MainWindow
         };
         settingsWindow.ShowDialog();
-    }
-
-    private void OpenHistory()
-    {
-        var historyWindow = new Views.HistoryWindow
-        {
-            Owner = System.Windows.Application.Current.MainWindow
-        };
-        historyWindow.ShowDialog();
     }
 }

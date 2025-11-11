@@ -1,3 +1,4 @@
+using System;
 using System.Collections.ObjectModel;
 using System.Windows.Input;
 using PowerShellHelper.Models;
@@ -19,7 +20,6 @@ public class SettingsWindowViewModel : ViewModelBase
     private string _modelName = string.Empty;
     private SecurityLevel _securityLevel;
     private string _defaultEditor = string.Empty;
-    private int _historyRetentionDays;
 
     public ObservableCollection<AIProvider> AIProviders { get; }
     public ObservableCollection<SecurityLevel> SecurityLevels { get; }
@@ -67,12 +67,6 @@ public class SettingsWindowViewModel : ViewModelBase
         set => SetProperty(ref _defaultEditor, value);
     }
 
-    public int HistoryRetentionDays
-    {
-        get => _historyRetentionDays;
-        set => SetProperty(ref _historyRetentionDays, value);
-    }
-
     public ICommand SaveCommand { get; }
     public ICommand CancelCommand { get; }
     public ICommand ResetCommand { get; }
@@ -105,7 +99,6 @@ public class SettingsWindowViewModel : ViewModelBase
         ModelName = config.AIConfig.ModelName ?? string.Empty;
         SecurityLevel = config.SecurityLevel;
         DefaultEditor = config.DefaultEditor;
-        HistoryRetentionDays = config.HistoryRetentionDays;
     }
 
     private void Save()
@@ -118,7 +111,6 @@ public class SettingsWindowViewModel : ViewModelBase
         config.AIConfig.ModelName = string.IsNullOrWhiteSpace(ModelName) ? null : ModelName;
         config.SecurityLevel = SecurityLevel;
         config.DefaultEditor = DefaultEditor;
-        config.HistoryRetentionDays = HistoryRetentionDays;
 
         _configManager.SaveConfig();
 

@@ -1,3 +1,4 @@
+using System;
 using System.IO;
 using System.Text.Json;
 using PowerShellHelper.Models;
@@ -75,9 +76,6 @@ public class ConfigManager
                 FontSize = Config.FontSize,
                 DefaultEditor = Config.DefaultEditor,
                 GlobalHotkey = Config.GlobalHotkey,
-                HistoryRetentionDays = Config.HistoryRetentionDays,
-                RecordSensitiveCommands = Config.RecordSensitiveCommands,
-                AutoCleanup = Config.AutoCleanup,
                 WindowLeft = Config.WindowLeft,
                 WindowTop = Config.WindowTop,
                 WindowWidth = Config.WindowWidth,

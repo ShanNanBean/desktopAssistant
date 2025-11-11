@@ -25,3 +25,30 @@ packages/
 *.db
 *.db-shm
 *.db-wal
+## .NET 编译输出
+bin/
+obj/
+*.user
+*.suo
+*.cache
+*.dll
+*.exe
+*.pdb
+
+## Visual Studio
+.vs/
+*.csproj.user
+*.vbproj.user
+
+## 用户数据
+%LOCALAPPDATA%/PowerShellHelper/
+
+## NuGet
+packages/
+*.nupkg
+
+## 日志和数据库
+*.log
+*.db
+*.db-shm
+*.db-wal
