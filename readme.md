@@ -107,27 +107,3 @@
 3. 添加更多AI提供商支持
 4. 优化UI交互体验
 5. 添加命令模板库功能
-
-## 项目结构说明
-
-本项目已完成核心功能的实现,包括:
-
-### 已实现的功能模块
-
-1. **核心数据模型** (`Models/`)
-   - 枚举类型定义 (AIProvider, SecurityLevel, RiskLevel等)
-   - 应用配置模型
-   - 数据传输对象
-
-2. **服务层** (`Services/`)
-   - `ConfigManager`: 配置管理(支持DPAPI加密)
-   - `AIService`: AI模型集成(支持OpenAI、Azure、通义千问、豆包、DeepSeek)
-   - `SafetyCheckerService`: 命令安全检查(黑白名单、风险评分)
-   - `PowerShellExecutor`: PowerShell命令执行
-   - `HistoryService`: 历史记录管理(SQLite)
-   - `FileHelperService`: 文件操作辅助
-
-3. **UI界面** (`Views/` 和 `ViewModels/`)
-   - 主对话窗口
-   - 设置窗口
-   - 历史记录窗口
