@@ -51,6 +51,31 @@
                                 Margin="0,0,0,5"/>
                         <TextBlock Text="留空将使用默认模型" 
                                   FontSize="11" 
+                                  Foreground="#666"
+                                  Margin="0,0,0,15"/>
+
+                        <TextBlock Text="请求超时时间(秒)" FontWeight="Bold" Margin="0,0,0,5"/>
+                        <StackPanel Orientation="Horizontal" Margin="0,0,0,5">
+                            <Slider x:Name="TimeoutSlider"
+                                   Value="{Binding TimeoutSeconds}"
+                                   Minimum="30"
+                                   Maximum="180"
+                                   TickFrequency="10"
+                                   IsSnapToTickEnabled="True"
+                                   Width="400"
+                                   VerticalAlignment="Center"/>
+                            <TextBlock Text="{Binding TimeoutSeconds}"
+                                      FontSize="14"
+                                      FontWeight="Bold"
+                                      Margin="10,0,0,0"
+                                      VerticalAlignment="Center"/>
+                            <TextBlock Text="秒"
+                                      FontSize="14"
+                                      Margin="3,0,0,0"
+                                      VerticalAlignment="Center"/>
+                        </StackPanel>
+                        <TextBlock Text="复杂任务(如生成Word文档)建议设置90秒以上" 
+                                  FontSize="11" 
                                   Foreground="#666"/>
                     </StackPanel>
                 </ScrollViewer>

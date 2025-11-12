@@ -18,6 +18,7 @@ public class SettingsWindowViewModel : ViewModelBase
     private string _apiKey = string.Empty;
     private string _apiEndpoint = string.Empty;
     private string _modelName = string.Empty;
+    private int _timeoutSeconds = 60;
     private SecurityLevel _securityLevel;
     private string _defaultEditor = string.Empty;
 
@@ -53,6 +54,12 @@ public class SettingsWindowViewModel : ViewModelBase
     {
         get => _modelName;
         set => SetProperty(ref _modelName, value);
+    }
+
+    public int TimeoutSeconds
+    {
+        get => _timeoutSeconds;
+        set => SetProperty(ref _timeoutSeconds, value);
     }
 
     public SecurityLevel SecurityLevel
@@ -97,6 +104,7 @@ public class SettingsWindowViewModel : ViewModelBase
         ApiKey = config.AIConfig.ApiKey;
         ApiEndpoint = config.AIConfig.ApiEndpoint ?? string.Empty;
         ModelName = config.AIConfig.ModelName ?? string.Empty;
+        TimeoutSeconds = config.AIConfig.TimeoutSeconds;
         SecurityLevel = config.SecurityLevel;
         DefaultEditor = config.DefaultEditor;
     }
@@ -109,6 +117,7 @@ public class SettingsWindowViewModel : ViewModelBase
         config.AIConfig.ApiKey = ApiKey;
         config.AIConfig.ApiEndpoint = string.IsNullOrWhiteSpace(ApiEndpoint) ? null : ApiEndpoint;
         config.AIConfig.ModelName = string.IsNullOrWhiteSpace(ModelName) ? null : ModelName;
+        config.AIConfig.TimeoutSeconds = TimeoutSeconds;
         config.SecurityLevel = SecurityLevel;
         config.DefaultEditor = DefaultEditor;
 

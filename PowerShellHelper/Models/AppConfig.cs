@@ -11,7 +11,7 @@ public class AIModelConfig
     public string ApiKey { get; set; } = string.Empty;
     public string? ApiEndpoint { get; set; }
     public string? ModelName { get; set; }
-    public int TimeoutSeconds { get; set; } = 30;
+    public int TimeoutSeconds { get; set; } = 60;
     public int MaxTokens { get; set; } = 2000;
 }
 

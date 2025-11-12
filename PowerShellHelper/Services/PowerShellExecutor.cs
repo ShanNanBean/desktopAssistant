@@ -50,6 +50,9 @@ public class PowerShellExecutor
             // 这是最可靠的方法，完全避免了参数转义问题
             var scriptLines = new[]
             {
+                "# 强制设置输出编码为UTF8，确保中文正常显示",
+                "[Console]::OutputEncoding = [System.Text.Encoding]::UTF8",
+                "$OutputEncoding = [System.Text.Encoding]::UTF8",
                 "$ErrorActionPreference = 'Continue'",
                 "try {",
                 $"  {command}",
