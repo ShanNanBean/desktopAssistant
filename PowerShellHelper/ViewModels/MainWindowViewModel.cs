@@ -206,14 +206,39 @@ public class MainWindowViewModel : ViewModelBase
 
         try
         {
-            // ... existing code ...
             var result = await _executor.ExecuteCommandAsync(command.CommandText);
+
+            // 智能判断是否显示输出结果
+            string? displayResult = null;
+            string contentMessage;
+
+            if (result.Success)
+            {
+                // 成功时，如果有输出内容则显示，否则只显示执行成功
+                var output = result.Output?.Trim();
+                if (!string.IsNullOrEmpty(output))
+                {
+                    contentMessage = "✅ 执行成功";
+                    displayResult = output;
+                }
+                else
+                {
+                    contentMessage = "✅ 执行成功";
+                    displayResult = null; // 没有输出内容，不显示结果块
+                }
+            }
+            else
+            {
+                // 失败时，显示错误信息
+                contentMessage = "❌ 执行失败";
+                displayResult = result.ErrorOutput?.Trim();
+            }
 
             var resultMessage = new ChatMessage
             {
                 IsUser = false,
-                Content = result.Success ? "✅ 执行成功" : "❌ 执行失败",
-                ExecutionResult = result.Success ? result.Output : result.ErrorOutput,
+                Content = contentMessage,
+                ExecutionResult = displayResult,
                 Status = result.Success ? ExecutionStatus.Success : ExecutionStatus.Failed,
                 Timestamp = DateTime.Now
             };

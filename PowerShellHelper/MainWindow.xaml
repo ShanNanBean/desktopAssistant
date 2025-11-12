@@ -137,6 +137,19 @@
                                         </Grid>
                                     </Border>
 
+                                    <!-- 执行结果块 -->
+                                    <Border Background="#F5F5F5"
+                                           CornerRadius="4"
+                                           Padding="10"
+                                           Margin="0,8,0,0"
+                                           Visibility="{Binding ExecutionResult, Converter={StaticResource NullToVisibilityConverter}}">
+                                        <TextBlock Text="{Binding ExecutionResult}" 
+                                                  Foreground="#37474F"
+                                                  FontFamily="Consolas"
+                                                  FontSize="12"
+                                                  TextWrapping="Wrap"/>
+                                    </Border>
+
                                     <!-- 时间戳 -->
                                     <TextBlock Text="{Binding Timestamp, StringFormat='{}{0:HH:mm:ss}'}" 
                                               FontSize="10"
