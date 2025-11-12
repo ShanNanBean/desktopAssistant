@@ -15,6 +15,7 @@ DefaultGroupName={#MyAppName}
 AllowNoIcons=yes
 OutputDir=installer_output
 OutputBaseFilename=PowerShellHelper_Setup_v{#MyAppVersion}
+SetupIconFile=icon.ico
 Compression=lzma2
 SolidCompression=yes
 WizardStyle=modern
