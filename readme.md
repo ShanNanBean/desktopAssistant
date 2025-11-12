@@ -180,10 +180,10 @@
 
 ## 演示
 # powershell命令
-![alt text](image.png)
+![alt text](PowerShellHelper\img\image.png)
 # 生成文件
-![alt text](image-1.png)
+![alt text](PowerShellHelper\img\image-1.png)
 # 支持的模型
-![alt text](image-2.png)
+![alt text](PowerShellHelper\img\image-2.png)
 # 安全策略
-![alt text](image-3.png)
+![alt text](PowerShellHelper\img\image-3.png)
